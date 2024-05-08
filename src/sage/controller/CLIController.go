@@ -1,40 +1,22 @@
-package main
+package controller
 
 import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/fs"
 	"log"
 	"os"
+	"sage/src/sage/cmd"
+	"sage/src/sage/data"
 	"strconv"
 	"strings"
+	"time"
 
 	"cloud.google.com/go/civil"
 	"github.com/Rhymond/go-money"
 )
 
-type Expense struct {
-	Id          int
-	Date        civil.Date
-	Location    string
-	Description string
-	Amount      *money.Money
-}
-
-var createTableQuery string = `CREATE TABLE IF NOT EXISTS expenses (
-	id INTEGER PRIMARY KEY,
-	date_spent DATE NOT NULL,
-	location VARCHAR(255),
-	description VARCHAR(255),
-	amt DECIMAL(19,4) NOT NULL
-	)`
-
-func main() {
-	os.Exit(runMain())
-}
-
-func runMain() int {
+func RunCLIController() int {
 	args := os.Args[1:]
 	if len(args) == 0 {
 		fmt.Println(`Valid sage commands:
@@ -45,14 +27,9 @@ func runMain() int {
 		return 0
 	}
 
-	return execRequest(args)
-}
-
-// execRequest accepts a list of args, the first element of which is assumed to be the command name.
-// Validation is performed on the given args and the appropriate command is executed.
-func execRequest(args []string) int {
-	cmd := args[0]
-	switch cmd {
+	var err error
+	command := args[0]
+	switch command {
 	case "add":
 		if len(args) < 5 {
 			log.Println("not enough fields provided")
@@ -64,49 +41,81 @@ func execRequest(args []string) int {
 			log.Println("error parsing add request", err)
 			return 1
 		}
-		err = verifyDatabase()
-		if err != nil {
-			log.Println("error verifying database", err)
+
+		addResp := cmd.AddExpense(addReq)
+		if addResp.Success {
+			fmt.Println("Expense added successfully")
+		} else {
+			fmt.Println("Error adding expense: ", addResp.Error)
 			return 1
 		}
-
-		return AddExpense(addReq)
 	case "log":
-		if len(args) == 1 {
-			return LogExpenses(&LogRequest{
-				ShowId: false,
-			})
+		logReq := &cmd.LogRequest{ShowId: false}
+		if len(args) != 1 {
+			logReq, err = parseLogRequest(args[1:])
+			if err != nil {
+				log.Println("error parsing log request: ", err)
+				return 1
+			}
 		}
 
-		logReq, err := parseLogRequest(args[1:])
-		if err != nil {
-			log.Println("error parsing log request: ", err)
-			return 1
-		}
-		err = verifyDatabase()
-		if err != nil {
-			log.Println("error verifying database", err)
-			return 1
-		}
+		logResp := cmd.LogExpenses(logReq)
+		if logResp.Success {
+			defer logResp.Result.Close()
 
-		return LogExpenses(logReq)
+			for logResp.Result.Next() {
+				var date time.Time
+				var location string
+				var description string
+				var amt float64
+				if logResp.ShowId {
+					var id int
+					err := logResp.Result.Scan(&id, &date, &location, &description, &amt)
+					if err != nil {
+						log.Println("error reading retrieved expenses: " + err.Error())
+						return 1
+					}
+					fmt.Printf("%d | %s | %s | %s | $%.2f\n", id, date.Format("2006-01-02"), location, description, amt)
+				} else {
+					err := logResp.Result.Scan(&date, &location, &description, &amt)
+					if err != nil {
+						log.Println("error reading retrieved expenses: " + err.Error())
+						return 1
+					}
+					fmt.Printf("%s | %s | %s | $%.2f\n", date.Format("2006-01-02"), location, description, amt)
+				}
+			}
+		} else {
+			fmt.Println("Error logging expenses: ", logResp.Error)
+			return 1
+		}
 	case "summary":
-		if len(args) == 1 {
-			return SummarizeExpenses(&SummaryRequest{})
+		sumReq := &cmd.SummaryRequest{}
+		if len(args) != 1 {
+			sumReq, err = parseSummaryRequest(args[1:])
+			if err != nil {
+				log.Println("error parsing summary request: ", err)
+				return 1
+			}
 		}
 
-		sumReq, err := parseSummaryRequest(args[1:])
-		if err != nil {
-			log.Println("error parsing summary request: ", err)
-			return 1
-		}
-		err = verifyDatabase()
-		if err != nil {
-			log.Println("error verifying database", err)
-			return 1
-		}
+		sumResp := cmd.SummarizeExpenses(sumReq)
+		if sumResp.Success {
+			defer sumResp.Result.Close()
 
-		return SummarizeExpenses(sumReq)
+			for sumResp.Result.Next() {
+				var month string
+				var totalSpent float64
+				err = sumResp.Result.Scan(&month, &totalSpent)
+				if err != nil {
+					log.Println("error reading calculated summary: " + err.Error())
+				}
+				fmt.Printf("%s: $%.2f\n", month, totalSpent)
+			}
+		} else {
+			fmt.Println("Error summarizing expenses: ", sumResp.Error)
+			return 1
+		}
 	case "delete":
 		if len(args) < 2 {
 			log.Println("need to provide an ID to delete")
@@ -117,48 +126,30 @@ func execRequest(args []string) int {
 			return 1
 		}
 
-		err := verifyDatabase()
+		id, err := strconv.Atoi(args[1])
 		if err != nil {
-			log.Println("error verifying database", err)
+			log.Println("invalid ID provided: ", err)
 			return 1
 		}
-		return DeleteExpense(&DeleteRequest{
-			Id: args[1],
+		deleteResp := cmd.DeleteExpense(&cmd.DeleteRequest{
+			Id: id,
 		})
+		if deleteResp.Success {
+			fmt.Println("Expense deleted successfully")
+		} else {
+			fmt.Println("Error deleting expense: ", deleteResp.Error)
+			return 1
+		}
 	default:
 		fmt.Println("Invalid command")
 		return 1
 	}
-}
 
-// verifyDatabase checks if the sage folder and sage.db database exists. Creates the necessary folder and SQLite file
-// if it doesn't.
-func verifyDatabase() error {
-	dirname, err := os.UserHomeDir()
-	if err != nil {
-		return errors.New("error getting user home directory: " + err.Error())
-	}
-
-	if _, err := os.Stat(dirname + "/sage"); errors.Is(err, fs.ErrNotExist) {
-		err := os.Mkdir(dirname+"/sage", 0755)
-		if err != nil {
-			return errors.New("error creating sage directory: " + err.Error())
-		}
-	}
-
-	if _, err := os.Stat(dirname + "/sage/sage.db"); errors.Is(err, fs.ErrNotExist) {
-		file, err := os.Create(dirname + "/sage/sage.db")
-		if err != nil {
-			return errors.New("error creating database file: " + err.Error())
-		}
-		file.Close()
-	}
-
-	return nil
+	return 0
 }
 
 // parseAddRequest takes a list of provided fields and constructs the appropriate AddRequest. Assumes 4 fields are provided.
-func parseAddRequest(args []string) (*AddRequest, error) {
+func parseAddRequest(args []string) (*cmd.AddRequest, error) {
 	date, err := civil.ParseDate(args[0])
 	if err != nil {
 		return nil, errors.New("error parsing date: " + err.Error())
@@ -194,8 +185,8 @@ func parseAddRequest(args []string) (*AddRequest, error) {
 	}
 	amt := money.New(i, money.USD)
 
-	return &AddRequest{
-		Expense: Expense{
+	return &cmd.AddRequest{
+		Expense: data.Expense{
 			Date:        date,
 			Location:    args[1],
 			Description: args[2],
@@ -205,7 +196,7 @@ func parseAddRequest(args []string) (*AddRequest, error) {
 }
 
 // parseLogRequest takes a list of args and constructs the appropriate LogRequest.
-func parseLogRequest(args []string) (*LogRequest, error) {
+func parseLogRequest(args []string) (*cmd.LogRequest, error) {
 	var err error
 
 	logCmd := flag.NewFlagSet("log", flag.ExitOnError)
@@ -247,7 +238,7 @@ func parseLogRequest(args []string) (*LogRequest, error) {
 		return nil, errors.New("must provide page size with page")
 	}
 
-	return &LogRequest{
+	return &cmd.LogRequest{
 		Start:    start,
 		End:      end,
 		Year:     *year,
@@ -260,7 +251,7 @@ func parseLogRequest(args []string) (*LogRequest, error) {
 }
 
 // parseSummaryRequest takes a list of args and constructs the appropriate SummaryRequest.
-func parseSummaryRequest(args []string) (*SummaryRequest, error) {
+func parseSummaryRequest(args []string) (*cmd.SummaryRequest, error) {
 	var err error
 
 	summCmd := flag.NewFlagSet("log", flag.ExitOnError)
@@ -300,7 +291,7 @@ func parseSummaryRequest(args []string) (*SummaryRequest, error) {
 		return nil, errors.New("must provide page size with page")
 	}
 
-	return &SummaryRequest{
+	return &cmd.SummaryRequest{
 		Start:    start,
 		End:      end,
 		Year:     *year,
