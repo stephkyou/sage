@@ -24,29 +24,8 @@ type SummaryResponse struct {
 	Result  *sql.Rows
 }
 
-// Prints the sum of expenses each month
-func SummarizeExpenses(sumReq *SummaryRequest) *SummaryResponse {
-	err := verifyDatabase()
-	if err != nil {
-		return &SummaryResponse{
-			Success: false,
-			Error:   fmt.Errorf("error verifying database: %w", err),
-		}
-	}
-
-	db, err := connectDB()
-	if err != nil {
-		return &SummaryResponse{
-			Success: false,
-			Error:   fmt.Errorf("error connecting to database: %w", err),
-		}
-	}
-	defer db.Close()
-
-	return summaryExec(db, sumReq)
-}
-
-func summaryExec(db *sql.DB, req *SummaryRequest) *SummaryResponse {
+// SummarizeExpenses retrieves the sum of expenses each month
+func SummarizeExpenses(db *sql.DB, req *SummaryRequest) *SummaryResponse {
 	connector := "WHERE"
 	var sb strings.Builder
 	sb.WriteString("SELECT strftime('%Y-%m', date_spent) AS month, sum(amt) AS total_spent FROM expenses")

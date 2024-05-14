@@ -27,30 +27,9 @@ type LogResponse struct {
 	Result  *sql.Rows
 }
 
-// LogExpenses retrieves the list of expenses corresponding to the given options and displays the date, location,
+// LogExpenses retrieves the list of expenses corresponding to the given options and returns the date, location,
 // description, and amount (and optionally the expense ID)
-func LogExpenses(logReq *LogRequest) *LogResponse {
-	err := verifyDatabase()
-	if err != nil {
-		return &LogResponse{
-			Success: false,
-			Error:   fmt.Errorf("error verifying database: %w", err),
-		}
-	}
-
-	db, err := connectDB()
-	if err != nil {
-		return &LogResponse{
-			Success: false,
-			Error:   fmt.Errorf("error connecting to database: %w", err),
-		}
-	}
-	defer db.Close()
-
-	return logExec(db, logReq)
-}
-
-func logExec(db *sql.DB, req *LogRequest) *LogResponse {
+func LogExpenses(db *sql.DB, req *LogRequest) *LogResponse {
 	connector := "WHERE"
 	var sb strings.Builder
 	sb.WriteString("SELECT ")

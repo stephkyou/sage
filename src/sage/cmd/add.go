@@ -17,30 +17,8 @@ type AddResponse struct {
 	Error   error
 }
 
-// AddExpense adds an expense to the database
-func AddExpense(addReq *AddRequest) *AddResponse {
-	err := verifyDatabase()
-	if err != nil {
-		return &AddResponse{
-			Success: false,
-			Error:   fmt.Errorf("error verifying database: %w", err),
-		}
-	}
-
-	db, err := connectDB()
-	if err != nil {
-		return &AddResponse{
-			Success: false,
-			Error:   fmt.Errorf("error connecting to database: %w", err),
-		}
-	}
-	defer db.Close()
-
-	return addExec(db, addReq)
-}
-
-// addExec adds an expense to the database
-func addExec(db *sql.DB, req *AddRequest) *AddResponse {
+// addExpense adds an expense to the database
+func AddExpense(db *sql.DB, req *AddRequest) *AddResponse {
 	_, err := db.Exec(fmt.Sprintf("INSERT INTO expenses (date_spent, location, description, amt) VALUES ('%s', '%s', '%s', %f)",
 		req.Expense.Date.String(),
 		req.Expense.Location,

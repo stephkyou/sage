@@ -42,7 +42,12 @@ func RunCLIController() int {
 			return 1
 		}
 
-		addResp := cmd.AddExpense(addReq)
+		db, err := cmd.ConnectDB("sage.db")
+		if err != nil {
+			log.Println("error connecting to database: ", err)
+			return 1
+		}
+		addResp := cmd.AddExpense(db, addReq)
 		if addResp.Success {
 			fmt.Println("Expense added successfully")
 		} else {
@@ -59,15 +64,20 @@ func RunCLIController() int {
 			}
 		}
 
-		logResp := cmd.LogExpenses(logReq)
+		db, err := cmd.ConnectDB("sage.db")
+		if err != nil {
+			log.Println("error connecting to database: ", err)
+			return 1
+		}
+		logResp := cmd.LogExpenses(db, logReq)
 		if logResp.Success {
 			defer logResp.Result.Close()
 
+			var date time.Time
+			var location string
+			var description string
+			var amt float64
 			for logResp.Result.Next() {
-				var date time.Time
-				var location string
-				var description string
-				var amt float64
 				if logResp.ShowId {
 					var id int
 					err := logResp.Result.Scan(&id, &date, &location, &description, &amt)
@@ -99,13 +109,18 @@ func RunCLIController() int {
 			}
 		}
 
-		sumResp := cmd.SummarizeExpenses(sumReq)
+		db, err := cmd.ConnectDB("sage.db")
+		if err != nil {
+			log.Println("error connecting to database: ", err)
+			return 1
+		}
+		sumResp := cmd.SummarizeExpenses(db, sumReq)
 		if sumResp.Success {
 			defer sumResp.Result.Close()
 
+			var month string
+			var totalSpent float64
 			for sumResp.Result.Next() {
-				var month string
-				var totalSpent float64
 				err = sumResp.Result.Scan(&month, &totalSpent)
 				if err != nil {
 					log.Println("error reading calculated summary: " + err.Error())
@@ -131,7 +146,13 @@ func RunCLIController() int {
 			log.Println("invalid ID provided: ", err)
 			return 1
 		}
-		deleteResp := cmd.DeleteExpense(&cmd.DeleteRequest{
+
+		db, err := cmd.ConnectDB("sage.db")
+		if err != nil {
+			log.Println("error connecting to database: ", err)
+			return 1
+		}
+		deleteResp := cmd.DeleteExpense(db, &cmd.DeleteRequest{
 			Id: id,
 		})
 		if deleteResp.Success {

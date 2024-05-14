@@ -7,17 +7,44 @@ import (
 	"os"
 )
 
-var createTableQuery string = `CREATE TABLE IF NOT EXISTS expenses (
-	id INTEGER PRIMARY KEY,
-	date_spent DATE NOT NULL,
-	location VARCHAR(255),
-	description VARCHAR(255),
-	amt DECIMAL(19,4) NOT NULL
-	)`
+const (
+	CREATE_TABLE_QUERY string = `CREATE TABLE IF NOT EXISTS expenses (
+		id INTEGER PRIMARY KEY,
+		date_spent DATE NOT NULL,
+		location VARCHAR(255),
+		description VARCHAR(255),
+		amt DECIMAL(19,4) NOT NULL
+		)`
+	SAGE_DB_NAME string = "sage.db"
+)
 
-// verifyDatabase checks if the sage folder and sage.db database exists. Creates the necessary folder and SQLite file
+// ConnectDB connects to the given database, or creates it if it doesn't exist. Also initializes the `expenses` table
+// if it doesn't exist.
+func ConnectDB(db_name string) (*sql.DB, error) {
+	// Verify database
+	err := verifyDatabase(db_name)
+	if err != nil {
+		return nil, errors.New("error verifying database: " + err.Error())
+	}
+
+	// Connect to database
+	db, err := sql.Open("sqlite3", db_name)
+	if err != nil {
+		return nil, errors.New("error connecting to database: " + err.Error())
+	}
+
+	// create `expenses` table if it doesn't exist
+	_, err = db.Exec(CREATE_TABLE_QUERY)
+	if err != nil {
+		return nil, errors.New("error initializing 'expenses' table: " + err.Error())
+	}
+
+	return db, nil
+}
+
+// verifyDatabase checks if the sage folder and given database exists. Creates the necessary folder and SQLite file
 // if it doesn't.
-func verifyDatabase() error {
+func verifyDatabase(db_name string) error {
 	dirname, err := os.UserHomeDir()
 	if err != nil {
 		return errors.New("error getting user home directory: " + err.Error())
@@ -30,8 +57,8 @@ func verifyDatabase() error {
 		}
 	}
 
-	if _, err := os.Stat(dirname + "/sage/sage.db"); errors.Is(err, fs.ErrNotExist) {
-		file, err := os.Create(dirname + "/sage/sage.db")
+	if _, err := os.Stat(dirname + "/sage/" + db_name); errors.Is(err, fs.ErrNotExist) {
+		file, err := os.Create(dirname + "/sage/" + db_name)
 		if err != nil {
 			return errors.New("error creating database file: " + err.Error())
 		}
@@ -39,21 +66,4 @@ func verifyDatabase() error {
 	}
 
 	return nil
-}
-
-// connectDB connects to the SQLite database and initializes the `expenses` table if it doesn't exist.
-func connectDB() (*sql.DB, error) {
-	// Connect to database
-	db, err := sql.Open("sqlite3", "sage.db")
-	if err != nil {
-		return nil, errors.New("error connecting to database: " + err.Error())
-	}
-
-	// create `expenses` table if it doesn't exist
-	_, err = db.Exec(createTableQuery)
-	if err != nil {
-		return nil, errors.New("error initializing 'expenses' table: " + err.Error())
-	}
-
-	return db, nil
 }
