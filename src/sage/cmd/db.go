@@ -22,13 +22,13 @@ const (
 // if it doesn't exist.
 func ConnectDB(db_name string) (*sql.DB, error) {
 	// Verify database
-	err := verifyDatabase(db_name)
+	path, err := verifyDatabase(db_name)
 	if err != nil {
 		return nil, errors.New("error verifying database: " + err.Error())
 	}
 
 	// Connect to database
-	db, err := sql.Open("sqlite3", db_name)
+	db, err := sql.Open("sqlite3", path)
 	if err != nil {
 		return nil, errors.New("error connecting to database: " + err.Error())
 	}
@@ -43,27 +43,27 @@ func ConnectDB(db_name string) (*sql.DB, error) {
 }
 
 // verifyDatabase checks if the sage folder and given database exists. Creates the necessary folder and SQLite file
-// if it doesn't.
-func verifyDatabase(db_name string) error {
+// if it doesn't. returns the path to the database file.
+func verifyDatabase(db_name string) (string, error) {
 	dirname, err := os.UserHomeDir()
 	if err != nil {
-		return errors.New("error getting user home directory: " + err.Error())
+		return "", errors.New("error getting user home directory: " + err.Error())
 	}
 
 	if _, err := os.Stat(dirname + "/sage"); errors.Is(err, fs.ErrNotExist) {
 		err := os.Mkdir(dirname+"/sage", 0755)
 		if err != nil {
-			return errors.New("error creating sage directory: " + err.Error())
+			return "", errors.New("error creating sage directory: " + err.Error())
 		}
 	}
 
 	if _, err := os.Stat(dirname + "/sage/" + db_name); errors.Is(err, fs.ErrNotExist) {
 		file, err := os.Create(dirname + "/sage/" + db_name)
 		if err != nil {
-			return errors.New("error creating database file: " + err.Error())
+			return "", errors.New("error creating database file: " + err.Error())
 		}
 		file.Close()
 	}
 
-	return nil
+	return dirname + "/sage/" + db_name, nil
 }

@@ -8,12 +8,11 @@ import (
 	"os"
 	"sage/src/sage/cmd"
 	"sage/src/sage/data"
+	"sage/src/sage/server"
 	"strconv"
-	"strings"
 	"time"
 
 	"cloud.google.com/go/civil"
-	"github.com/Rhymond/go-money"
 )
 
 func RunCLIController() int {
@@ -161,6 +160,12 @@ func RunCLIController() int {
 			fmt.Println("Error deleting expense: ", deleteResp.Error)
 			return 1
 		}
+	case "server":
+		err := server.RunServer()
+		if err != nil {
+			log.Println("error running server: ", err)
+			return 1
+		}
 	default:
 		fmt.Println("Invalid command")
 		return 1
@@ -176,35 +181,10 @@ func parseAddRequest(args []string) (*cmd.AddRequest, error) {
 		return nil, errors.New("error parsing date: " + err.Error())
 	}
 
-	inputAmt := args[3]
-	parts := strings.Split(inputAmt, ".")
-	if len(parts) > 2 {
-		return nil, errors.New("amount must be in the format X.YY")
-	}
-	if len(parts) == 2 {
-		if len(parts[1]) > 2 {
-			return nil, errors.New("amount must have at most 2 decimal places")
-		}
-		if len(parts[1]) == 1 {
-			inputAmt += "0"
-		} else if len(parts[1]) == 0 {
-			return nil, errors.New("amount must be in the format X.YY")
-		}
-	} else if len(parts) == 1 {
-		inputAmt += ".00"
-	}
-
-	i, err := strconv.ParseInt(strings.ReplaceAll(inputAmt, ".", ""), 10, 64)
+	amt, err := cmd.ParseAmount(args[3])
 	if err != nil {
-		return nil, errors.New("error parsing amount: " + err.Error())
+		return nil, err
 	}
-	if i < 0 {
-		return nil, errors.New("amount cannot be negative")
-	}
-	if i == 0 {
-		return nil, errors.New("amount cannot be zero")
-	}
-	amt := money.New(i, money.USD)
 
 	return &cmd.AddRequest{
 		Expense: data.Expense{
@@ -218,8 +198,6 @@ func parseAddRequest(args []string) (*cmd.AddRequest, error) {
 
 // parseLogRequest takes a list of args and constructs the appropriate LogRequest.
 func parseLogRequest(args []string) (*cmd.LogRequest, error) {
-	var err error
-
 	logCmd := flag.NewFlagSet("log", flag.ExitOnError)
 	startStr := logCmd.String("start", "", "start date")
 	endStr := logCmd.String("end", "", "end date")
@@ -232,49 +210,11 @@ func parseLogRequest(args []string) (*cmd.LogRequest, error) {
 
 	logCmd.Parse(args)
 
-	start := civil.Date{}
-	if *startStr != "" {
-		start, err = civil.ParseDate(*startStr)
-		if err != nil {
-			return nil, errors.New("error parsing start date: " + err.Error())
-		}
-	}
-	end := civil.Date{}
-	if *endStr != "" {
-		end, err = civil.ParseDate(*endStr)
-		if err != nil {
-			return nil, errors.New("error parsing end date: " + err.Error())
-		}
-	}
-
-	if !start.IsZero() && !end.IsZero() {
-		if start.After(end) {
-			return nil, errors.New("start date is after end date")
-		}
-	}
-	if *limit != 0 && (*pageSize != 0 || *page != 0) {
-		return nil, errors.New("cannot provide limit with page size or page")
-	}
-	if *page != 0 && *pageSize == 0 {
-		return nil, errors.New("must provide page size with page")
-	}
-
-	return &cmd.LogRequest{
-		Start:    start,
-		End:      end,
-		Year:     *year,
-		Month:    *month,
-		Limit:    *limit,
-		PageSize: *pageSize,
-		Page:     *page,
-		ShowId:   *showId,
-	}, nil
+	return cmd.ParseLogArgs(*startStr, *endStr, *year, *month, *limit, *pageSize, *page, *showId)
 }
 
 // parseSummaryRequest takes a list of args and constructs the appropriate SummaryRequest.
 func parseSummaryRequest(args []string) (*cmd.SummaryRequest, error) {
-	var err error
-
 	summCmd := flag.NewFlagSet("log", flag.ExitOnError)
 	startStr := summCmd.String("start", "", "start date")
 	endStr := summCmd.String("end", "", "end date")
@@ -285,39 +225,5 @@ func parseSummaryRequest(args []string) (*cmd.SummaryRequest, error) {
 
 	summCmd.Parse(args)
 
-	start := civil.Date{}
-	if *startStr != "" {
-		start, err = civil.ParseDate(*startStr)
-		if err != nil {
-			return nil, errors.New("error parsing start date: " + err.Error())
-		}
-	}
-	end := civil.Date{}
-	if *endStr != "" {
-		end, err = civil.ParseDate(*endStr)
-		if err != nil {
-			return nil, errors.New("error parsing end date: " + err.Error())
-		}
-	}
-
-	if !start.IsZero() && !end.IsZero() {
-		if start.After(end) {
-			return nil, errors.New("start date is after end date")
-		}
-	}
-	if *limit != 0 && (*pageSize != 0 || *page != 0) {
-		return nil, errors.New("cannot provide limit with page size or page")
-	}
-	if *page != 0 && *pageSize == 0 {
-		return nil, errors.New("must provide page size with page")
-	}
-
-	return &cmd.SummaryRequest{
-		Start:    start,
-		End:      end,
-		Year:     *year,
-		Limit:    *limit,
-		PageSize: *pageSize,
-		Page:     *page,
-	}, nil
+	return cmd.ParseSummaryArgs(*startStr, *endStr, *year, *limit, *pageSize, *page)
 }
