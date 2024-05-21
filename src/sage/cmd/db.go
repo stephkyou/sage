@@ -16,6 +16,7 @@ const (
 		amt DECIMAL(19,4) NOT NULL
 		)`
 	SAGE_DB_NAME string = "sage.db"
+	TEST_DB_NAME string = "test.db"
 )
 
 // ConnectDB connects to the given database, or creates it if it doesn't exist. Also initializes the `expenses` table

@@ -1,10 +1,16 @@
 package server
 
 import (
+	"database/sql"
+	"sage/src/sage/cmd"
+
 	"github.com/gin-gonic/gin"
 )
 
+var db *sql.DB
+
 func RunServer() error {
+	db, _ = cmd.ConnectDB(cmd.SAGE_DB_NAME)
 	r := gin.Default()
 
 	r.POST("/add", addHandler)

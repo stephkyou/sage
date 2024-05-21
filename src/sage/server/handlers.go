@@ -44,11 +44,6 @@ func addHandler(c *gin.Context) {
 		},
 	}
 
-	db, err := cmd.ConnectDB("sage.db")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "error connecting to database"})
-		return
-	}
 	addResp := cmd.AddExpense(db, addReq)
 	if addResp.Success {
 		c.JSON(http.StatusOK, gin.H{"success": "expense added successfully"})
@@ -122,11 +117,6 @@ func logHandler(c *gin.Context) {
 	logReq, err := cmd.ParseLogArgs(startStr, endStr, year, month, limit, pageSize, page, showId)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	db, err := cmd.ConnectDB("sage.db")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "error connecting to database"})
 		return
 	}
 	logResp := cmd.LogExpenses(db, logReq)
@@ -212,11 +202,6 @@ func summaryHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	db, err := cmd.ConnectDB("sage.db")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "error connecting to database"})
-		return
-	}
 	sumResp := cmd.SummarizeExpenses(db, sumReq)
 	if sumResp.Success {
 		defer sumResp.Result.Close()
@@ -253,11 +238,6 @@ func deleteHandler(c *gin.Context) {
 		return
 	}
 
-	db, err := cmd.ConnectDB("sage.db")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "error connecting to database"})
-		return
-	}
 	deleteResp := cmd.DeleteExpense(db, &cmd.DeleteRequest{
 		Id: id,
 	})
