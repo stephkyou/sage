@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/civil"
+	"github.com/Rhymond/go-money"
 	"github.com/gin-gonic/gin"
 )
 
@@ -20,20 +21,21 @@ func addHandler(c *gin.Context) {
 	amtStr := c.Query("amount")
 
 	if dateStr == "" || amtStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "amount and date are required"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "amount and date are required"})
 		return
 	}
 
 	date, err := civil.ParseDate(dateStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date format"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid date format"})
 		return
 	}
-	amt, err := cmd.ParseAmount(amtStr)
+	fl, err := strconv.ParseFloat(amtStr, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid amount format"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid amount format"})
 		return
 	}
+	amt := money.NewFromFloat(fl, money.USD)
 
 	addReq := &cmd.AddRequest{
 		Expense: data.Expense{
@@ -46,9 +48,9 @@ func addHandler(c *gin.Context) {
 
 	addResp := cmd.AddExpense(db, addReq)
 	if addResp.Success {
-		c.JSON(http.StatusOK, gin.H{"success": "expense added successfully"})
+		c.JSON(http.StatusOK, gin.H{"message": "expense added successfully"})
 	} else {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": addResp.Error.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": addResp.Error.Error()})
 	}
 }
 
@@ -74,49 +76,49 @@ func logHandler(c *gin.Context) {
 	if yearStr != "" {
 		year, err = strconv.Atoi(yearStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid year format"})
+			c.JSON(http.StatusBadRequest, gin.H{"message": "invalid year format"})
 			return
 		}
 	}
 	if monthStr != "" {
 		month, err = strconv.Atoi(monthStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid month format"})
+			c.JSON(http.StatusBadRequest, gin.H{"message": "invalid month format"})
 			return
 		}
 	}
 	if limitStr != "" {
 		limit, err = strconv.Atoi(limitStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid limit format"})
+			c.JSON(http.StatusBadRequest, gin.H{"message": "invalid limit format"})
 			return
 		}
 	}
 	if pageSizeStr != "" {
 		pageSize, err = strconv.Atoi(pageSizeStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid page size format"})
+			c.JSON(http.StatusBadRequest, gin.H{"message": "invalid page size format"})
 			return
 		}
 	}
 	if pageStr != "" {
 		page, err = strconv.Atoi(pageStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid page format"})
+			c.JSON(http.StatusBadRequest, gin.H{"message": "invalid page format"})
 			return
 		}
 	}
 	if showIdStr != "" {
 		showId, err = strconv.ParseBool(showIdStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid show ID format"})
+			c.JSON(http.StatusBadRequest, gin.H{"message": "invalid show ID format"})
 			return
 		}
 	}
 
 	logReq, err := cmd.ParseLogArgs(startStr, endStr, year, month, limit, pageSize, page, showId)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
 	logResp := cmd.LogExpenses(db, logReq)
@@ -128,28 +130,28 @@ func logHandler(c *gin.Context) {
 		var date time.Time
 		var location string
 		var description string
-		var amt float64
+		var amt money.Amount
 		for logResp.Result.Next() {
 			if logResp.ShowId {
 				var id int
 				err := logResp.Result.Scan(&id, &date, &location, &description, &amt)
 				if err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+					c.JSON(http.StatusInternalServerError, gin.H{"message": err})
 				}
-				row := []string{strconv.Itoa(id), date.Format("2006-01-02"), location, description, fmt.Sprintf("%.2f", amt)}
+				row := []string{strconv.Itoa(id), date.Format("2006-01-02"), location, description, fmt.Sprintf("%.2f", float64(amt)/100)}
 				results = append(results, row)
 			} else {
 				err := logResp.Result.Scan(&date, &location, &description, &amt)
 				if err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+					c.JSON(http.StatusInternalServerError, gin.H{"message": err})
 				}
-				row := []string{date.Format("2006-01-02"), location, description, fmt.Sprintf("%.2f", amt)}
+				row := []string{date.Format("2006-01-02"), location, description, fmt.Sprintf("%.2f", float64(amt)/100)}
 				results = append(results, row)
 			}
 		}
 		c.JSON(http.StatusOK, gin.H{"show_id": logResp.ShowId, "result": results})
 	} else {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": logResp.Error.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": logResp.Error.Error()})
 	}
 }
 
@@ -171,35 +173,35 @@ func summaryHandler(c *gin.Context) {
 	if yearStr != "" {
 		year, err = strconv.Atoi(yearStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid year format"})
+			c.JSON(http.StatusBadRequest, gin.H{"message": "invalid year format"})
 			return
 		}
 	}
 	if limitStr != "" {
 		limit, err = strconv.Atoi(limitStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid limit format"})
+			c.JSON(http.StatusBadRequest, gin.H{"message": "invalid limit format"})
 			return
 		}
 	}
 	if pageSizeStr != "" {
 		pageSize, err = strconv.Atoi(pageSizeStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid page size format"})
+			c.JSON(http.StatusBadRequest, gin.H{"message": "invalid page size format"})
 			return
 		}
 	}
 	if pageStr != "" {
 		page, err = strconv.Atoi(pageStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid page format"})
+			c.JSON(http.StatusBadRequest, gin.H{"message": "invalid page format"})
 			return
 		}
 	}
 
 	sumReq, err := cmd.ParseSummaryArgs(startStr, endStr, year, limit, pageSize, page)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
 	sumResp := cmd.SummarizeExpenses(db, sumReq)
@@ -209,18 +211,18 @@ func summaryHandler(c *gin.Context) {
 		var results [][]string
 
 		var month string
-		var totalSpent float64
+		var totalSpent money.Amount
 		for sumResp.Result.Next() {
 			err := sumResp.Result.Scan(&month, &totalSpent)
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+				c.JSON(http.StatusInternalServerError, gin.H{"message": err})
 			}
-			row := []string{month, fmt.Sprintf("%.2f", totalSpent)}
+			row := []string{month, fmt.Sprintf("%.2f", float64(totalSpent)/100)}
 			results = append(results, row)
 		}
 		c.JSON(http.StatusOK, gin.H{"result": results})
 	} else {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": sumResp.Error.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": sumResp.Error.Error()})
 	}
 }
 
@@ -228,13 +230,13 @@ func summaryHandler(c *gin.Context) {
 func deleteHandler(c *gin.Context) {
 	idStr := c.Params.ByName("id")
 	if idStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "id is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "id is required"})
 		return
 	}
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id format"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid id format"})
 		return
 	}
 
@@ -242,8 +244,8 @@ func deleteHandler(c *gin.Context) {
 		Id: id,
 	})
 	if deleteResp.Success {
-		c.JSON(http.StatusOK, gin.H{"success": "expense deleted successfully"})
+		c.JSON(http.StatusOK, gin.H{"message": "expense deleted successfully"})
 	} else {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": deleteResp.Error.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": deleteResp.Error.Error()})
 	}
 }

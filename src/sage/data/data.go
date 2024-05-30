@@ -6,9 +6,9 @@ import (
 )
 
 type Expense struct {
-	Id          int
-	Date        civil.Date
-	Location    string
-	Description string
-	Amount      *money.Money
+	Id          int          `json:"-"`
+	Date        civil.Date   `json:"date"`
+	Location    string       `json:"location,omitempty"`
+	Description string       `json:"description,omitempty"`
+	Amount      *money.Money `json:"amount"`
 }
