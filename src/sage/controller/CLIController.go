@@ -182,10 +182,11 @@ func parseAddRequest(args []string) (*cmd.AddRequest, error) {
 		return nil, errors.New("error parsing date: " + err.Error())
 	}
 
-	amt, err := cmd.ParseAmount(args[3])
+	fl, err := strconv.ParseFloat(args[3], 64)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("error parsing amount: " + err.Error())
 	}
+	amt := money.NewFromFloat(fl, money.USD)
 
 	return &cmd.AddRequest{
 		Expense: data.Expense{

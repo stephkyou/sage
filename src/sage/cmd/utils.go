@@ -3,48 +3,11 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
 
 	"cloud.google.com/go/civil"
-	"github.com/Rhymond/go-money"
 )
 
 const MAX_PAGE_SIZE = 100
-
-// ParseAmount takes a string and constructs a money.Money object.
-func ParseAmount(inputAmt string) (*money.Money, error) {
-	parts := strings.Split(inputAmt, ".")
-	if len(parts) > 2 {
-		return nil, errors.New("amount must be in the format X.YY")
-	}
-	if len(parts) == 2 {
-		if len(parts[1]) > 2 {
-			return nil, errors.New("amount must have at most 2 decimal places")
-		}
-		if len(parts[1]) == 1 {
-			inputAmt += "0"
-		} else if len(parts[1]) == 0 {
-			return nil, errors.New("amount must be in the format X.YY")
-		}
-	} else if len(parts) == 1 {
-		inputAmt += ".00"
-	}
-
-	i, err := strconv.ParseInt(strings.ReplaceAll(inputAmt, ".", ""), 10, 64)
-	if err != nil {
-		return nil, errors.New("error parsing amount: " + err.Error())
-	}
-	if i < 0 {
-		return nil, errors.New("amount cannot be negative")
-	}
-	if i == 0 {
-		return nil, errors.New("amount cannot be zero")
-	}
-	amt := money.New(i, money.USD)
-
-	return amt, nil
-}
 
 // ParseLogArgs takes a list of args and constructs the appropriate LogRequest. year, month, limit, pageSize, and page
 // default to 0. showId defaults to false.
