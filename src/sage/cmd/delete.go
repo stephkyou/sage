@@ -18,7 +18,22 @@ type DeleteResponse struct {
 
 // DeleteExpense removes an expense from the database
 func DeleteExpense(db *sql.DB, req *DeleteRequest) *DeleteResponse {
-	_, err := db.Exec(fmt.Sprintf("DELETE FROM expenses WHERE id = '%d'", req.Id))
+	rows, err := db.Query(fmt.Sprintf("SELECT id FROM expenses WHERE id = '%d'", req.Id))
+	if err != nil {
+		return &DeleteResponse{
+			Success: false,
+			Error:   fmt.Errorf("error querying 'expenses' table: %w", err),
+		}
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		return &DeleteResponse{
+			Success: false,
+			Error:   fmt.Errorf("no expense with ID %d found", req.Id),
+		}
+	}
+
+	_, err = db.Exec(fmt.Sprintf("DELETE FROM expenses WHERE id = '%d'", req.Id))
 	if err != nil {
 		return &DeleteResponse{
 			Success: false,
