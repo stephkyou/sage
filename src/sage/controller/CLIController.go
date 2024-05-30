@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/civil"
+	"github.com/Rhymond/go-money"
 )
 
 func RunCLIController() int {
@@ -75,7 +76,7 @@ func RunCLIController() int {
 			var date time.Time
 			var location string
 			var description string
-			var amt float64
+			var amt money.Amount
 			for logResp.Result.Next() {
 				if logResp.ShowId {
 					var id int
@@ -84,14 +85,14 @@ func RunCLIController() int {
 						log.Println("error reading retrieved expenses: " + err.Error())
 						return 1
 					}
-					fmt.Printf("%d | %s | %s | %s | $%.2f\n", id, date.Format("2006-01-02"), location, description, amt)
+					fmt.Printf("%d | %s | %s | %s | $%.2f\n", id, date.Format("2006-01-02"), location, description, float64(amt)/100)
 				} else {
 					err := logResp.Result.Scan(&date, &location, &description, &amt)
 					if err != nil {
 						log.Println("error reading retrieved expenses: " + err.Error())
 						return 1
 					}
-					fmt.Printf("%s | %s | %s | $%.2f\n", date.Format("2006-01-02"), location, description, amt)
+					fmt.Printf("%s | %s | %s | $%.2f\n", date.Format("2006-01-02"), location, description, float64(amt)/100)
 				}
 			}
 		} else {
@@ -118,13 +119,13 @@ func RunCLIController() int {
 			defer sumResp.Result.Close()
 
 			var month string
-			var totalSpent float64
+			var totalSpent money.Amount
 			for sumResp.Result.Next() {
 				err = sumResp.Result.Scan(&month, &totalSpent)
 				if err != nil {
 					log.Println("error reading calculated summary: " + err.Error())
 				}
-				fmt.Printf("%s: $%.2f\n", month, totalSpent)
+				fmt.Printf("%s: $%.2f\n", month, float64(totalSpent)/100)
 			}
 		} else {
 			fmt.Println("Error summarizing expenses: ", sumResp.Error)

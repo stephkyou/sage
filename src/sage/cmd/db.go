@@ -13,7 +13,7 @@ const (
 		date_spent DATE NOT NULL,
 		location VARCHAR(255),
 		description VARCHAR(255),
-		amt DECIMAL(19,4) NOT NULL
+		amt INTEGER NOT NULL
 		)`
 	SAGE_DB_NAME string = "sage.db"
 	TEST_DB_NAME string = "test.db"
