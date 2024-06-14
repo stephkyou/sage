@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"net/http"
 	"sage/src/sage/cmd"
 	"sage/src/sage/data"
@@ -125,12 +124,12 @@ func logHandler(c *gin.Context) {
 	if logResp.Success {
 		defer logResp.Result.Close()
 
-		var results [][]string
-
+		var results []data.Expense
 		var date time.Time
 		var location string
 		var description string
 		var amt money.Amount
+
 		for logResp.Result.Next() {
 			if logResp.ShowId {
 				var id int
@@ -138,14 +137,25 @@ func logHandler(c *gin.Context) {
 				if err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"message": err})
 				}
-				row := []string{strconv.Itoa(id), date.Format("2006-01-02"), location, description, fmt.Sprintf("%.2f", float64(amt)/100)}
+				row := data.Expense{
+					Id:          id,
+					Date:        civil.DateOf(date),
+					Location:    location,
+					Description: description,
+					Amount:      money.New(amt, "USD"),
+				}
 				results = append(results, row)
 			} else {
 				err := logResp.Result.Scan(&date, &location, &description, &amt)
 				if err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"message": err})
 				}
-				row := []string{date.Format("2006-01-02"), location, description, fmt.Sprintf("%.2f", float64(amt)/100)}
+				row := data.Expense{
+					Date:        civil.DateOf(date),
+					Location:    location,
+					Description: description,
+					Amount:      money.New(amt, "USD"),
+				}
 				results = append(results, row)
 			}
 		}
@@ -208,16 +218,19 @@ func summaryHandler(c *gin.Context) {
 	if sumResp.Success {
 		defer sumResp.Result.Close()
 
-		var results [][]string
-
+		var results []data.Summary
 		var month string
 		var totalSpent money.Amount
+
 		for sumResp.Result.Next() {
 			err := sumResp.Result.Scan(&month, &totalSpent)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"message": err})
 			}
-			row := []string{month, fmt.Sprintf("%.2f", float64(totalSpent)/100)}
+			row := data.Summary{
+				Month: month,
+				Total: money.New(totalSpent, "USD"),
+			}
 			results = append(results, row)
 		}
 		c.JSON(http.StatusOK, gin.H{"result": results})

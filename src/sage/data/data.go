@@ -6,9 +6,14 @@ import (
 )
 
 type Expense struct {
-	Id          int          `json:"-"`
+	Id          int          `json:"id"`
 	Date        civil.Date   `json:"date"`
 	Location    string       `json:"location,omitempty"`
 	Description string       `json:"description,omitempty"`
 	Amount      *money.Money `json:"amount"`
+}
+
+type Summary struct {
+	Month string       `json:"month"`
+	Total *money.Money `json:"total"`
 }
