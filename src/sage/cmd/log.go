@@ -18,6 +18,7 @@ type LogRequest struct {
 	PageSize int
 	Page     int
 	ShowId   bool
+	Query    string
 }
 
 type LogResponse struct {
@@ -51,6 +52,10 @@ func LogExpenses(db *sql.DB, req *LogRequest) *LogResponse {
 	}
 	if req.Month != 0 {
 		sb.WriteString(fmt.Sprintf(" %s strftime('%%m', date_spent) = '%d'", connector, req.Month))
+		connector = "AND"
+	}
+	if req.Query != "" {
+		sb.WriteString(fmt.Sprintf(" %s date_spent LIKE '%%%s%%' OR location LIKE '%%%s%%' OR description LIKE '%%%s%%' OR amt LIKE '%%%s%%'", connector, req.Query, req.Query, req.Query, req.Query))
 		connector = "AND"
 	}
 	sb.WriteString(" ORDER BY date_spent, id")

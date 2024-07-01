@@ -63,6 +63,7 @@ func logHandler(c *gin.Context) {
 	pageSizeStr := c.Query("page-size")
 	pageStr := c.Query("page")
 	showIdStr := c.Query("show-id")
+	query := c.Query("query")
 
 	year := 0
 	month := 0
@@ -115,7 +116,7 @@ func logHandler(c *gin.Context) {
 		}
 	}
 
-	logReq, err := cmd.ParseLogArgs(startStr, endStr, year, month, limit, pageSize, page, showId)
+	logReq, err := cmd.ParseLogArgs(startStr, endStr, year, month, limit, pageSize, page, showId, query)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return

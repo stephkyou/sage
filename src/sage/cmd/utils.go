@@ -11,7 +11,7 @@ const MAX_PAGE_SIZE = 100
 
 // ParseLogArgs takes a list of args and constructs the appropriate LogRequest. year, month, limit, pageSize, and page
 // default to 0. showId defaults to false.
-func ParseLogArgs(startStr, endStr string, year, month, limit, pageSize, page int, showId bool) (*LogRequest, error) {
+func ParseLogArgs(startStr, endStr string, year, month, limit, pageSize, page int, showId bool, query string) (*LogRequest, error) {
 	var err error
 
 	start := civil.Date{}
@@ -68,6 +68,7 @@ func ParseLogArgs(startStr, endStr string, year, month, limit, pageSize, page in
 		PageSize: pageSize,
 		Page:     page,
 		ShowId:   showId,
+		Query:    query,
 	}, nil
 }
 

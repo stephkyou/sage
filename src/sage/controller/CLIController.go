@@ -209,10 +209,11 @@ func parseLogRequest(args []string) (*cmd.LogRequest, error) {
 	pageSize := logCmd.Int("page-size", 0, "page size")
 	page := logCmd.Int("page", 0, "page")
 	showId := logCmd.Bool("show-id", false, "show the expense ID")
+	query := logCmd.String("query", "", "search query")
 
 	logCmd.Parse(args)
 
-	return cmd.ParseLogArgs(*startStr, *endStr, *year, *month, *limit, *pageSize, *page, *showId)
+	return cmd.ParseLogArgs(*startStr, *endStr, *year, *month, *limit, *pageSize, *page, *showId, *query)
 }
 
 // parseSummaryRequest takes a list of args and constructs the appropriate SummaryRequest.
