@@ -25,13 +25,15 @@ func DeleteExpense(db *sql.DB, req *DeleteRequest) *DeleteResponse {
 			Error:   fmt.Errorf("error querying 'expenses' table: %w", err),
 		}
 	}
-	defer rows.Close()
 	if !rows.Next() {
+		rows.Close()
 		return &DeleteResponse{
 			Success: false,
 			Error:   fmt.Errorf("no expense with ID %d found", req.Id),
 		}
 	}
+
+	rows.Close()
 
 	_, err = db.Exec(fmt.Sprintf("DELETE FROM expenses WHERE id = '%d'", req.Id))
 	if err != nil {
