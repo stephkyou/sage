@@ -266,7 +266,13 @@ func deleteHandler(c *gin.Context) {
 
 // countHandler handles counting the number of total expenses
 func countHandler(c *gin.Context) {
-	countResp := cmd.CountExpenses(db, &cmd.CountRequest{})
+	typeStr := c.Params.ByName("type")
+	if typeStr != "log" && typeStr != "summary" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid type"})
+		return
+	}
+
+	countResp := cmd.CountExpenses(db, &cmd.CountRequest{Type: typeStr})
 	if countResp.Success {
 		c.JSON(http.StatusOK, gin.H{"count": countResp.Result})
 	} else {

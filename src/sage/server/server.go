@@ -18,7 +18,7 @@ func RunServer() error {
 	r.GET("/log", logHandler)
 	r.GET("/summary", summaryHandler)
 	r.DELETE("/delete/:id", deleteHandler)
-	r.GET("/count", countHandler)
+	r.GET("/count/:type", countHandler)
 
 	r.Run(":8080")
 
