@@ -263,3 +263,13 @@ func deleteHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": deleteResp.Error.Error()})
 	}
 }
+
+// countHandler handles counting the number of total expenses
+func countHandler(c *gin.Context) {
+	countResp := cmd.CountExpenses(db, &cmd.CountRequest{})
+	if countResp.Success {
+		c.JSON(http.StatusOK, gin.H{"count": countResp.Result})
+	} else {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": countResp.Error.Error()})
+	}
+}
