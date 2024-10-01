@@ -12,7 +12,7 @@ Make sure you have [Go](https://go.dev/) installed on your computer. Clone this 
 
 ## Usage
 
-Sage is intended to be used as a backend to [sage-ui](https://github.com/stephkyou/sage-ui). To get a server running for `sage-ui`, run `sage server` in your terminal. Sage also has a lightweight CLI.
+Sage is intended to be used as a backend to [sage-ui](https://github.com/stephkyou/sage-ui). To get a server running for `sage-ui`, run `sage server` in your terminal and navigate to a browser to access Sage. Sage also has a lightweight CLI.
 
 ```bash
 sage add
