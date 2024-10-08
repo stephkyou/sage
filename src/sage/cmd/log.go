@@ -37,7 +37,7 @@ func LogExpenses(db *sql.DB, req *LogRequest) *LogResponse {
 	if req.ShowId {
 		sb.WriteString("id, ")
 	}
-	sb.WriteString("date_spent, location, description, amt FROM expenses")
+	sb.WriteString("date_spent, location, description, category, amt FROM expenses")
 	if !req.Start.IsZero() {
 		sb.WriteString(fmt.Sprintf(" %s date_spent >= '%s'", connector, req.Start.String()))
 		connector = "AND"

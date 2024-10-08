@@ -31,7 +31,7 @@ func RunCLIController() int {
 	command := args[0]
 	switch command {
 	case "add":
-		if len(args) < 5 {
+		if len(args) < 6 {
 			log.Println("not enough fields provided")
 			return 1
 		}
@@ -76,23 +76,30 @@ func RunCLIController() int {
 			var date time.Time
 			var location string
 			var description string
+			var category string
 			var amt money.Amount
 			for logResp.Result.Next() {
 				if logResp.ShowId {
 					var id int
-					err := logResp.Result.Scan(&id, &date, &location, &description, &amt)
+					err := logResp.Result.Scan(&id, &date, &location, &description, &category, &amt)
 					if err != nil {
 						log.Println("error reading retrieved expenses: " + err.Error())
 						return 1
 					}
-					fmt.Printf("%d | %s | %s | %s | $%.2f\n", id, date.Format("2006-01-02"), location, description, float64(amt)/100)
+					if category == "" {
+						category = "uncategorized"
+					}
+					fmt.Printf("%d | %s | %s | %s | %s | $%.2f\n", id, date.Format("2006-01-02"), location, description, category, float64(amt)/100)
 				} else {
-					err := logResp.Result.Scan(&date, &location, &description, &amt)
+					err := logResp.Result.Scan(&date, &location, &description, &category, &amt)
 					if err != nil {
 						log.Println("error reading retrieved expenses: " + err.Error())
 						return 1
 					}
-					fmt.Printf("%s | %s | %s | $%.2f\n", date.Format("2006-01-02"), location, description, float64(amt)/100)
+					if category == "" {
+						category = "uncategorized"
+					}
+					fmt.Printf("%s | %s | %s | %s | $%.2f\n", date.Format("2006-01-02"), location, description, category, float64(amt)/100)
 				}
 			}
 		} else {
@@ -182,7 +189,7 @@ func parseAddRequest(args []string) (*cmd.AddRequest, error) {
 		return nil, errors.New("error parsing date: " + err.Error())
 	}
 
-	fl, err := strconv.ParseFloat(args[3], 64)
+	fl, err := strconv.ParseFloat(args[4], 64)
 	if err != nil {
 		return nil, errors.New("error parsing amount: " + err.Error())
 	}
@@ -193,6 +200,7 @@ func parseAddRequest(args []string) (*cmd.AddRequest, error) {
 			Date:        date,
 			Location:    args[1],
 			Description: args[2],
+			Category:    args[3],
 			Amount:      amt,
 		},
 	}, nil

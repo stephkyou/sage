@@ -10,6 +10,7 @@ type Expense struct {
 	Date        civil.Date   `json:"date"`
 	Location    string       `json:"location,omitempty"`
 	Description string       `json:"description,omitempty"`
+	Category    string       `json:"category,omitempty"`
 	Amount      *money.Money `json:"amount"`
 }
 
