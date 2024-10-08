@@ -10,6 +10,7 @@ import (
 	"sage/src/sage/data"
 	"sage/src/sage/server"
 	"strconv"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/civil"
@@ -51,7 +52,11 @@ func RunCLIController() int {
 		if addResp.Success {
 			fmt.Println("Expense added successfully")
 		} else {
-			fmt.Println("Error adding expense: ", addResp.Error)
+			if strings.Contains(addResp.Error.Error(), "FOREIGN KEY constraint failed") {
+				fmt.Println("Error adding expense: category does not exist")
+			} else {
+				fmt.Println("Error adding expense: ", addResp.Error)
+			}
 			return 1
 		}
 	case "log":

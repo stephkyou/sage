@@ -14,7 +14,12 @@ const (
 		location VARCHAR(255),
 		description VARCHAR(255),
 		category VARCHAR(255),
-		amt INTEGER NOT NULL
+		amt INTEGER NOT NULL,
+		FOREIGN KEY (category) REFERENCES categories(name)
+		)`
+	CREATE_CATEGORY_TABLE_QUERY string = `CREATE TABLE IF NOT EXISTS categories (
+		id INTEGER PRIMARY KEY,
+		name VARCHAR(255) UNIQUE NOT NULL
 		)`
 	SAGE_DB_NAME string = "sage.db"
 	TEST_DB_NAME string = "test.db"
@@ -30,7 +35,7 @@ func ConnectDB(db_name string) (*sql.DB, error) {
 	}
 
 	// Connect to database
-	db, err := sql.Open("sqlite3", path)
+	db, err := sql.Open("sqlite3", path+"?_foreign_keys=on")
 	if err != nil {
 		return nil, errors.New("error connecting to database: " + err.Error())
 	}
@@ -39,6 +44,12 @@ func ConnectDB(db_name string) (*sql.DB, error) {
 	_, err = db.Exec(CREATE_TABLE_QUERY)
 	if err != nil {
 		return nil, errors.New("error initializing 'expenses' table: " + err.Error())
+	}
+
+	// create `categories` table if it doesn't exist
+	_, err = db.Exec(CREATE_CATEGORY_TABLE_QUERY)
+	if err != nil {
+		return nil, errors.New("error initializing 'categories' table: " + err.Error())
 	}
 
 	return db, nil
