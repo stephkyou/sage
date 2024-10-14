@@ -175,7 +175,20 @@ func RunCLIController() int {
 			return 1
 		}
 	case "category":
+		if len(args) == 2 || len(args) > 3 {
+			log.Println("incorrect number of fields provided")
+			return 1
+		}
 		catReq := &cmd.CategoryRequest{}
+		if len(args) == 3 {
+			if args[1] == "add" {
+				catReq.Subcommand = args[1]
+				catReq.CategoryName = args[2]
+			} else {
+				log.Println("invalid subcommand provided")
+				return 1
+			}
+		}
 
 		db, err := cmd.ConnectDB("sage.db")
 		if err != nil {
@@ -184,16 +197,20 @@ func RunCLIController() int {
 		}
 		catResp := cmd.ExpenseCategory(db, catReq)
 		if catResp.Success {
-			defer catResp.Result.Close()
+			if catResp.Subcommand == "add" {
+				fmt.Println("Category successfully added")
+			} else {
+				defer catResp.Result.Close()
 
-			var category string
-			for catResp.Result.Next() {
-				err := catResp.Result.Scan(&category)
-				if err != nil {
-					log.Println("error reading retrieved categories: " + err.Error())
-					return 1
+				var category string
+				for catResp.Result.Next() {
+					err := catResp.Result.Scan(&category)
+					if err != nil {
+						log.Println("error reading retrieved categories: " + err.Error())
+						return 1
+					}
+					fmt.Println(category)
 				}
-				fmt.Println(category)
 			}
 		} else {
 			fmt.Println("Error retrieving categories: ", catResp.Error)
