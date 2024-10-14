@@ -25,7 +25,10 @@ func RunCLIController() int {
 		log [--start <date>] [--end <date>] [--year <year>] [--month <month>] [-n <limit>] [--page-size <size>] [--page <page>] [--show-id]
 		summary [--start <date>] [--end <date>] [--year <year>] [-n <limit>] [--page-size <size>] [--page <page>]
 		delete <id>
-		category`)
+		category
+		category add <category>
+		category delete <category>
+		category edit <category> <new-category>`)
 		return 0
 	}
 
@@ -175,7 +178,7 @@ func RunCLIController() int {
 			return 1
 		}
 	case "category":
-		if len(args) == 2 || len(args) > 3 {
+		if len(args) == 2 || len(args) > 4 {
 			log.Println("incorrect number of fields provided")
 			return 1
 		}
@@ -188,7 +191,16 @@ func RunCLIController() int {
 				catReq.Subcommand = args[1]
 				catReq.CategoryName = args[2]
 			} else {
-				log.Println("invalid subcommand provided")
+				log.Println("invalid subcommand or number of fields provided")
+				return 1
+			}
+		} else if len(args) == 4 {
+			if args[1] == "edit" {
+				catReq.Subcommand = args[1]
+				catReq.CategoryName = args[2]
+				catReq.NewCategoryName = args[3]
+			} else {
+				log.Println("invalid subcommand or number of fields provided")
 				return 1
 			}
 		}
@@ -204,6 +216,8 @@ func RunCLIController() int {
 				fmt.Println("Category successfully added")
 			} else if catResp.Subcommand == "delete" {
 				fmt.Println("Category successfully deleted")
+			} else if catResp.Subcommand == "edit" {
+				fmt.Printf("Category successfully changed from %s to %s\n", catReq.CategoryName, catReq.NewCategoryName)
 			} else {
 				defer catResp.Result.Close()
 
