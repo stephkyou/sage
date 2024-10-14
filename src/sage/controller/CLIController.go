@@ -184,6 +184,9 @@ func RunCLIController() int {
 			if args[1] == "add" {
 				catReq.Subcommand = args[1]
 				catReq.CategoryName = args[2]
+			} else if args[1] == "delete" {
+				catReq.Subcommand = args[1]
+				catReq.CategoryName = args[2]
 			} else {
 				log.Println("invalid subcommand provided")
 				return 1
@@ -199,6 +202,8 @@ func RunCLIController() int {
 		if catResp.Success {
 			if catResp.Subcommand == "add" {
 				fmt.Println("Category successfully added")
+			} else if catResp.Subcommand == "delete" {
+				fmt.Println("Category successfully deleted")
 			} else {
 				defer catResp.Result.Close()
 
