@@ -24,7 +24,8 @@ func RunCLIController() int {
 		add <date> <location> <description> <amount>
 		log [--start <date>] [--end <date>] [--year <year>] [--month <month>] [-n <limit>] [--page-size <size>] [--page <page>] [--show-id]
 		summary [--start <date>] [--end <date>] [--year <year>] [-n <limit>] [--page-size <size>] [--page <page>]
-		delete <id>`)
+		delete <id>
+		category`)
 		return 0
 	}
 
@@ -171,6 +172,31 @@ func RunCLIController() int {
 			fmt.Println("Expense deleted successfully")
 		} else {
 			fmt.Println("Error deleting expense: ", deleteResp.Error)
+			return 1
+		}
+	case "category":
+		catReq := &cmd.CategoryRequest{}
+
+		db, err := cmd.ConnectDB("sage.db")
+		if err != nil {
+			log.Println("error connecting to database: ", err)
+			return 1
+		}
+		catResp := cmd.ExpenseCategory(db, catReq)
+		if catResp.Success {
+			defer catResp.Result.Close()
+
+			var category string
+			for catResp.Result.Next() {
+				err := catResp.Result.Scan(&category)
+				if err != nil {
+					log.Println("error reading retrieved categories: " + err.Error())
+					return 1
+				}
+				fmt.Println(category)
+			}
+		} else {
+			fmt.Println("Error retrieving categories: ", catResp.Error)
 			return 1
 		}
 	case "server":
